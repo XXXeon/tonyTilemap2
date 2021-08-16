@@ -72,7 +72,7 @@ class Player(pg.sprite.Sprite):
             self.vel = vec(WEAPONS[self.weapon]['knockback'], 0).rotate(-self.rot)
             for i in range(WEAPONS[self.weapon]['attack_count']):
                 spread = uniform(-WEAPONS[self.weapon]['accuracy'], WEAPONS[self.weapon]['accuracy'])
-                Fist(self.game, pos, dir.rotate(spread))
+                Fist(self.game, pos, dir.rotate(spread), WEAPONS[self.weapon]['damage'])
                 snd = choice(self.game.weapon_sounds[self.weapon])
                 if snd.get_num_channels() > 2:
                     snd.stop()
@@ -170,7 +170,7 @@ class Mob(pg.sprite.Sprite):
 
 
 class Fist(pg.sprite.Sprite):
-    def __init__(self, game, pos, dir):
+    def __init__(self, game, pos, dir, damage):
         self._layer = FIST_LAYER
         self.groups = game.all_sprites, game.fists
         pg.sprite.Sprite.__init__(self, self.groups)
@@ -184,6 +184,7 @@ class Fist(pg.sprite.Sprite):
         self.vel = dir * WEAPONS[game.player.weapon]['attack_speed']
         self.spawn_time = pg.time.get_ticks()
         self.rot = 0
+        self.damage = damage
 
     def update(self):
         self.rot = (self.game.player.pos - self.pos).angle_to(vec(1, 6))

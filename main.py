@@ -83,16 +83,13 @@ class Game:
     def load_data(self):
         game_folder = path.dirname(__file__)
         img_folder = path.join(game_folder, 'assets')
-        map_folder = path.join(game_folder, 'tileset')
         snd_folder = path.join(game_folder, 'snd')
         music_folder = path.join(snd_folder, 'music')
+        self.map_folder = path.join(game_folder, 'tileset')
         self.basic_font = path.join(img_folder, 'Proxima Nova Regular.otf')
         self.dim_screen = pg.Surface(self.screen.get_size()).convert_alpha()
         self.dim_screen.fill((0, 0, 0, 180))
-        self.map = TiledMap(path.join(map_folder, 'lvl1.tmx'))
         # Loading in all image assets used
-        self.map_img = self.map.make_map()
-        self.map_rect =	self.map_img.get_rect()
         self.player_img = pg.image.load(path.join(img_folder, PLAYER_IMG)).convert_alpha()
         self.mob_img = pg.image.load(path.join(img_folder, MOB_IMG)).convert_alpha()
         self.fist_img = pg.image.load(path.join(img_folder, FIST_IMG)).convert_alpha()
@@ -144,6 +141,9 @@ class Game:
         self.mobs = pg.sprite.Group()
         self.fists = pg.sprite.Group()
         self.items = pg.sprite.Group()
+        self.map = TiledMap(path.join(self.map_folder, 'lvl1.tmx'))
+        self.map_img = self.map.make_map()
+        self.map_rect =	self.map_img.get_rect()
 #            for row, tiles in enumerate(self.map.data):
 #                for col, tile in enumerate(tiles):
 #                    if tile == '1':
@@ -188,6 +188,9 @@ class Game:
         # update portion of the game loop
         self.all_sprites.update()
         self.camera.update(self.player)
+        # game over?
+        if len(self.mobs) == 0:
+            self.playing = False
         # player hits items
         hits = pg.sprite.spritecollide(self.player, self.items, False)
         for hit in hits:
@@ -220,10 +223,12 @@ class Game:
             hits = pg.sprite.groupcollide(self.mobs, self.fists, False, True)
         else:
             hits = pg.sprite.groupcollide(self.mobs, self.fists, False, False)
-        for hit in hits:
-            hit.health -= WEAPONS[self.player.weapon]['damage'] * len(hits[hit])
+        for mob in hits:
+            # hit.health -= WEAPONS[self.player.weapon]['damage'] * len(hits[hit])
+            for bullet in hits[mob]:
+                mob.health -= bullet.damage
             kb = WEAPONS[self.player.weapon]['mob_knockback'] * 100
-            hit.vel = vec(kb, kb)  # I MADE THEM GO BACK
+            mob.vel = vec(kb, kb)  # I MADE THEM GO BACK
 
             # this is utterly fucked
             # a grave transgression has been made in the
@@ -252,6 +257,8 @@ class Game:
         # pg.draw.rect(self.screen, WHITE, self.player.hit_rect, 2) # Shows hitbox of player
         # HUD functions
         draw_player_health(self.screen, 10, 10, self.player.health / PLAYER_HEALTH)
+        self.draw_text('Enemies: {}'.format(len(self.mobs)), self.basic_font, 30, WHITE,
+                       WIDTH - 10, 10, align="ne")
         if self.paused:
             self.screen.blit(self.dim_screen, (0, 0))
             self.draw_text("PAUSED", self.basic_font, 105, WHITE, WIDTH / 2, HEIGHT / 2, align="center")
@@ -275,7 +282,25 @@ class Game:
         pass
 
     def show_go_screen(self):
-        pass
+        self.screen.fill(BLACK)
+        self.draw_text("\"GAME OVER\"", self.basic_font, 100, RED,
+                       WIDTH / 2, HEIGHT / 2, align="center")
+        self.draw_text("Press the any key to start", self.basic_font, 50, WHITE,
+                       WIDTH / 2, HEIGHT * 3 / 4, align="center")
+        pg.display.flip()
+        self.wait_for_key()
+
+    def wait_for_key(self):
+        pg.event.wait()
+        waiting = True
+        while waiting:
+            self.clock.tick(FPS)
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    waiting = False
+                    self.quit()
+                if event.type == pg.KEYUP:
+                    waiting = False
 
 # create the game object
 g = Game()
